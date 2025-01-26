@@ -1,28 +1,19 @@
 const express = require("express");
 const connectDb = require("./config/database");
-const User = require("./models/user");
+const cookieParser = require("cookie-parser");
 const app = express();
+app.use(express.json());
+app.use(cookieParser());
 
-app.post("/signup", async (req, res) => {
-  const user = new User({
-    firstName: "alok",
-    lastName: "jha",
-    email: "alok@123gmail.com",
-    age: "21",
-  });
-  try {
-    await user.save();
-    res.send("user data saved");
-  } catch (err) {
-    res.status(400).send("error in signup", err.message);
-  }
-});
-
+const authRouter = require("./routes/auth");
+const authProfile = require("./routes/profile");
+app.use("/", authRouter);
+app.use("/", authProfile);
 connectDb()
   .then(() => {
     console.log("db connected succesfully");
-    app.listen(3000, () => {
-      console.log(`Server running on port 3000`);
+    app.listen(7777, () => {
+      console.log(`Server running on port 7777`);
     });
   })
   .catch((err) => {
