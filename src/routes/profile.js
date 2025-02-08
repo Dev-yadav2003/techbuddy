@@ -20,7 +20,8 @@ authProfile.patch("/profile/edit", checkAuth, async (req, res) => {
     }
     const user = req.user;
     Object.keys(data).forEach((k) => (user[k] = data[k]));
-    res.send(user);
+    await user.save();
+    res.send("user updated");
   } catch (err) {
     res.status(400).send("Error: " + err.message);
   }

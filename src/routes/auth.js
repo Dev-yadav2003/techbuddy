@@ -39,7 +39,7 @@ userAuth.get("/login", async (req, res) => {
       throw new Error("Invalid Credential");
     }
     const token = jwt.sign({ _id: user._id }, "Dev@123", { expiresIn: "1d" });
-    res.cookie("token", token, { expires: new Date(Date.now() + 600000) });
+    res.cookie("token", token, { expires: new Date(Date.now() + 6000000) });
     res.send(`${user.firstName} login sucessfully`);
   } catch (err) {
     res.status(400).send("Error: " + err.message);
