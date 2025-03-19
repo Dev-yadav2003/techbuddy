@@ -70,7 +70,7 @@ request.post(
       const data = await checkRequest.save();
       return res
         .status(400)
-        .json({ message: "conection request" + status, data });
+        .json({ message: "conection request " + status, data });
     } catch (err) {
       return res.status(400).json({ Error: err.message });
     }

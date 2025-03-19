@@ -5,7 +5,7 @@ const checkAuth = async (req, res, next) => {
   try {
     const { token } = req.cookies;
     if (!token) {
-      throw new Error("something went wrong please login again...");
+      return res.status(401).send("please login again");
     }
     const decodedMessage = jwt.verify(token, "Dev@123");
     const { _id } = decodedMessage;

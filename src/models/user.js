@@ -50,6 +50,12 @@ const userSchema = new mongoose.Schema({
     default: ["javaScript", "CPP", "Java"],
     maxLength: 10,
   },
+  profile: {
+    type: String,
+    default:
+      "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp",
+    maxLength: 150,
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);
