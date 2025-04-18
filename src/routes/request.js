@@ -51,6 +51,7 @@ request.post(
     try {
       const { status, requestId } = req.params;
       const loginUser = req.user;
+
       const allowedStatus = ["accepted", "rejected"];
       if (!allowedStatus.includes(status)) {
         return res.status(400).json({ message: "Invalid status " + status });
@@ -61,18 +62,20 @@ request.post(
         toUserId: loginUser._id,
         status: "intrested",
       });
+
       if (!checkRequest) {
-        return res.status(400).json({ message: "no request found" });
+        return res.status(404).json({ message: "No request found" });
       }
 
       checkRequest.status = status;
 
       const data = await checkRequest.save();
+
       return res
-        .status(400)
-        .json({ message: "conection request " + status, data });
+        .status(200)
+        .json({ message: "Connection request " + status, data });
     } catch (err) {
-      return res.status(400).json({ Error: err.message });
+      return res.status(500).json({ error: err.message });
     }
   }
 );

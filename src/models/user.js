@@ -34,8 +34,10 @@ const userSchema = new mongoose.Schema({
   },
   gender: {
     type: String,
+    lowerCase: true,
     validate(value) {
-      if (!["male", "female", "other"].includes(value)) {
+      const lowerValue = value.toLowerCase();
+      if (!["male", "female", "other"].includes(lowerValue)) {
         throw new Error("please enter valid data");
       }
     },
@@ -47,7 +49,7 @@ const userSchema = new mongoose.Schema({
   },
   skills: {
     type: [String],
-    default: ["javaScript", "CPP", "Java"],
+    default: ["javaScript ", "CPP ", "Java "],
     maxLength: 10,
   },
   profile: {

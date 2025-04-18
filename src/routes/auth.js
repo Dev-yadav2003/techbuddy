@@ -17,8 +17,17 @@ userAuth.post("/signUp", async (req, res) => {
       emailId,
       password: passwordHash,
     });
-    await user.save();
-    res.send("user created sucessfully");
+    const saveUser = await user.save();
+    const token = jwt.sign({ _id: user._id }, process.env.JWT_PASSWORD, {
+      expiresIn: "1d",
+    });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      expires: new Date(Date.now() + 60000000),
+    });
+    res.json({ message: "user created sucessfully", data: saveUser });
   } catch (err) {
     res.status(400).send("Error: " + err.message);
   }
@@ -32,7 +41,7 @@ userAuth.post("/login", async (req, res) => {
     }
     const user = await User.findOne({ emailId: emailId });
     if (!user) {
-      throw new Error("User not found");
+      throw new Error("User not found Sign Up");
     }
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
