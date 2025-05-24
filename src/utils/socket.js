@@ -14,16 +14,27 @@ const initializeSocket = (server) => {
     socket.on("joinChat", ({ userId, targetUserId }) => {
       const roomId = [userId, targetUserId].sort().join("_");
       socket.join(roomId);
-      console.log(`${userId} have joined room with roomId ` + roomId);
+      console.log(`${userId} joined room: ${roomId}`);
     });
+
     socket.on(
       "sendMessage",
       ({ userId, targetUserId, text, firstName, timestamp }) => {
         const roomId = [userId, targetUserId].sort().join("_");
-        console.log(firstName + ":" + text + " " + timestamp);
-        io.to(roomId).emit("messageRecieved", { firstName, text, timestamp });
+        console.log(`${firstName}: ${text} at ${timestamp}`);
+
+        io.to(roomId).emit("messageRecieved", {
+          firstName,
+          text,
+          timestamp,
+          senderId: userId,
+        });
       }
     );
+
+    socket.on("disconnect", () => {
+      console.log("A user disconnected:", socket.id);
+    });
   });
 };
 
