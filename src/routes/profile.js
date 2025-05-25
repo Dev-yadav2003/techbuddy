@@ -9,11 +9,13 @@ const User = require("../models/user");
 
 const unlink = util.promisify(fs.unlink);
 
+// Configure upload directory
 const uploadDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Configure multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -26,6 +28,7 @@ const storage = multer.diskStorage({
   },
 });
 
+// File filter for image uploads
 const fileFilter = (req, file, cb) => {
   const filetypes = /jpeg|jpg|png/;
   const mimetype = filetypes.test(file.mimetype);
@@ -41,10 +44,11 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 5 * 1024 * 1024, // 5MB
   },
 });
 
+// Get profile
 authProfile.get("/profile/view", checkAuth, async (req, res) => {
   try {
     const user = req.user;
@@ -53,6 +57,10 @@ authProfile.get("/profile/view", checkAuth, async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       emailId: user.emailId,
+      skills: user.skills,
+      age: user.age,
+      gender: user.gender,
+      about: user.about,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -74,20 +82,43 @@ authProfile.get("/profile/view", checkAuth, async (req, res) => {
   }
 });
 
+// Update profile
 authProfile.patch(
   "/profile/edit",
   checkAuth,
-  upload.single("profileImage"),
+  upload.single("profile"),
   async (req, res) => {
     try {
       const user = req.user;
       const updates = req.body;
 
-      if (updates.firstName) user.firstName = updates.firstName;
-      if (updates.lastName) user.lastName = updates.lastName;
+      // Validate updates exist
+      if (!updates || (Object.keys(updates).length === 0 && !req.file)) {
+        return res.status(400).json({
+          success: false,
+          error: "No updates provided",
+        });
+      }
 
+      // Update allowed fields
+      const allowedFields = [
+        "firstName",
+        "lastName",
+        "skills",
+        "age",
+        "gender",
+        "about",
+      ];
+      Object.keys(updates).forEach((key) => {
+        if (allowedFields.includes(key)) {
+          user[key] = updates[key];
+        }
+      });
+
+      // Handle profile image upload
       if (req.file) {
         try {
+          // Delete old image if exists
           if (user.profileImage) {
             const oldImagePath = path.join(uploadDir, user.profileImage);
             if (fs.existsSync(oldImagePath)) {
@@ -95,6 +126,7 @@ authProfile.patch(
             }
           }
 
+          // Save new image filename to database
           user.profileImage = req.file.filename;
         } catch (err) {
           console.error("Error handling profile image:", err);
@@ -105,18 +137,24 @@ authProfile.patch(
         }
       }
 
-      await user.save();
+      // Save updated user
+      const savedUser = await user.save();
 
+      // Prepare response
       const responseData = {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        emailId: user.emailId,
-        profileImageUrl: user.profileImage
-          ? `/uploads/${user.profileImage}`
+        _id: savedUser._id,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        emailId: savedUser.emailId,
+        skills: savedUser.skills,
+        age: savedUser.age,
+        gender: savedUser.gender,
+        about: savedUser.about,
+        profileImageUrl: savedUser.profileImage
+          ? `/uploads/${savedUser.profileImage}`
           : null,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        createdAt: savedUser.createdAt,
+        updatedAt: savedUser.updatedAt,
       };
 
       res.json({
