@@ -1,11 +1,11 @@
 const express = require("express");
 const checkAuth = require("../middlewares/checkAuth");
-const { validateEditProfileData } = require("../utils/validation");
 const authProfile = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const util = require("util");
+const User = require("../models/user");
 
 const unlink = util.promisify(fs.unlink);
 
@@ -21,7 +21,8 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
+    const filename = `${uniqueSuffix}${ext}`;
+    cb(null, filename);
   },
 });
 
@@ -33,7 +34,7 @@ const fileFilter = (req, file, cb) => {
   if (mimetype && extname) {
     return cb(null, true);
   }
-  cb(new Error("Only .jpeg, .jpg and .png files are allowed"));
+  cb(new Error("Only JPEG, JPG and PNG images are allowed"));
 };
 
 const upload = multer({
@@ -47,67 +48,88 @@ const upload = multer({
 authProfile.get("/profile/view", checkAuth, async (req, res) => {
   try {
     const user = req.user;
-    const userData = user.toObject();
+    const userData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      emailId: user.emailId,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
 
-    if (user.profile) {
-      userData.profileUrl = `/uploads/${user.profile}`;
+    if (user.profileImage) {
+      userData.profileImageUrl = `/uploads/${user.profileImage}`;
     }
 
-    res.json(userData);
+    res.json({
+      success: true,
+      user: userData,
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("Profile view error:", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch profile",
+    });
   }
 });
 
 authProfile.patch(
   "/profile/edit",
   checkAuth,
-  upload.single("profile"),
+  upload.single("profileImage"),
   async (req, res) => {
     try {
       const user = req.user;
       const updates = req.body;
 
-      if (!validateEditProfileData(req)) {
-        throw new Error("Invalid edit fields");
-      }
-
-      Object.keys(updates).forEach((key) => {
-        if (updates[key] !== undefined) {
-          user[key] = updates[key];
-        }
-      });
+      if (updates.firstName) user.firstName = updates.firstName;
+      if (updates.lastName) user.lastName = updates.lastName;
 
       if (req.file) {
         try {
-          if (user.profile) {
-            const oldImagePath = path.join(uploadDir, user.profile);
+          if (user.profileImage) {
+            const oldImagePath = path.join(uploadDir, user.profileImage);
             if (fs.existsSync(oldImagePath)) {
               await unlink(oldImagePath);
             }
           }
 
-          user.profile = req.file.filename;
+          user.profileImage = req.file.filename;
         } catch (err) {
           console.error("Error handling profile image:", err);
-          throw new Error("Failed to update profile image");
+          return res.status(500).json({
+            success: false,
+            error: "Failed to update profile image",
+          });
         }
       }
 
       await user.save();
 
-      const response = {
-        message: "Profile updated successfully",
-        user: {
-          ...user.toObject(),
-          profileUrl: user.profile ? `/uploads/${user.profile}` : null,
-        },
+      const responseData = {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        emailId: user.emailId,
+        profileImageUrl: user.profileImage
+          ? `/uploads/${user.profileImage}`
+          : null,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       };
 
-      res.json(response);
+      res.json({
+        success: true,
+        message: "Profile updated successfully",
+        user: responseData,
+      });
     } catch (err) {
       console.error("Profile update error:", err);
-      res.status(400).json({ error: err.message });
+      res.status(500).json({
+        success: false,
+        error: err.message || "Failed to update profile",
+      });
     }
   }
 );

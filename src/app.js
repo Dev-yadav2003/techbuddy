@@ -11,8 +11,9 @@ const initializeSocket = require("./utils/socket");
 
 app.use(
   cors({
-    origin: "https://techbuddy-frontend.vercel.app",
+    origin: ["https://techbuddy-frontend.vercel.app"],
     credentials: true,
+    exposedHeaders: ["set-cookie"],
   })
 );
 
