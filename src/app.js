@@ -9,10 +9,6 @@ require("dotenv").config();
 const app = express();
 const initializeSocket = require("./utils/socket");
 
-app.get("/test-env", (req, res) => {
-  res.send(`JWT_PASSWORD is: ${process.env.JWT_PASSWORD || "NOT SET"}`);
-});
-
 app.use(
   cors({
     origin: "https://techbuddy-frontend.vercel.app",

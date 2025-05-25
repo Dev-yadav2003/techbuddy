@@ -1,15 +1,13 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 
-const JWT_SECRET = process.env.JWT_PASSWORD || "Dev@123";
-
 const checkAuth = async (req, res, next) => {
   try {
     const { token } = req.cookies;
     if (!token) {
       return res.status(401).send("Please login again (no token)");
     }
-    const decodedMessage = jwt.verify(token, JWT_SECRET);
+    const decodedMessage = jwt.verify(token, JWT_PASSWORD);
     const { _id } = decodedMessage;
     const user = await User.findById(_id);
     if (!user) {
