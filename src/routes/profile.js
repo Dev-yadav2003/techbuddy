@@ -82,7 +82,6 @@ authProfile.get("/profile/view", checkAuth, async (req, res) => {
   }
 });
 
-// Update profile
 authProfile.patch(
   "/profile/edit",
   checkAuth,
@@ -92,15 +91,6 @@ authProfile.patch(
       const user = req.user;
       const updates = req.body;
 
-      // Validate updates exist
-      if (!updates || (Object.keys(updates).length === 0 && !req.file)) {
-        return res.status(400).json({
-          success: false,
-          error: "No updates provided",
-        });
-      }
-
-      // Update allowed fields
       const allowedFields = [
         "firstName",
         "lastName",
@@ -109,27 +99,24 @@ authProfile.patch(
         "gender",
         "about",
       ];
-      Object.keys(updates).forEach((key) => {
-        if (allowedFields.includes(key)) {
-          user[key] = updates[key];
+      allowedFields.forEach((field) => {
+        if (updates[field] !== undefined) {
+          user[field] = updates[field];
         }
       });
 
-      // Handle profile image upload
       if (req.file) {
         try {
-          // Delete old image if exists
-          if (user.profileImage) {
+          if (user.profileImage && !user.profileImage.includes("daisyui.com")) {
             const oldImagePath = path.join(uploadDir, user.profileImage);
             if (fs.existsSync(oldImagePath)) {
               await unlink(oldImagePath);
             }
           }
 
-          // Save new image filename to database
           user.profileImage = req.file.filename;
         } catch (err) {
-          console.error("Error handling profile image:", err);
+          console.error("Image processing error:", err);
           return res.status(500).json({
             success: false,
             error: "Failed to update profile image",
@@ -137,10 +124,8 @@ authProfile.patch(
         }
       }
 
-      // Save updated user
       const savedUser = await user.save();
 
-      // Prepare response
       const responseData = {
         _id: savedUser._id,
         firstName: savedUser.firstName,
@@ -152,7 +137,7 @@ authProfile.patch(
         about: savedUser.about,
         profileImageUrl: savedUser.profileImage
           ? `/uploads/${savedUser.profileImage}`
-          : null,
+          : savedUser.profileImage,
         createdAt: savedUser.createdAt,
         updatedAt: savedUser.updatedAt,
       };
