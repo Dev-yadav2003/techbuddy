@@ -13,9 +13,9 @@ app.use(
   cors({
     origin: "https://techbuddy-frontend.vercel.app",
     credentials: true,
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
   })
 );
+
 app.use(express.json());
 app.use(cookieParser());
 
