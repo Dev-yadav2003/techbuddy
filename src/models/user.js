@@ -53,7 +53,7 @@ const userSchema = new mongoose.Schema(
       default: ["javaScript", "CPP", "Java"],
       maxLength: 10,
     },
-    profileImage: {
+    profile: {
       type: String,
       default:
         "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp",
