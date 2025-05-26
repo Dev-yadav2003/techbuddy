@@ -1,6 +1,6 @@
 const express = require("express");
 const checkAuth = require("../middlewares/checkAuth");
-const profileRouter = express.Router();
+const authProfile = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -9,11 +9,13 @@ const User = require("../models/user");
 
 const unlink = util.promisify(fs.unlink);
 
+// Configure upload directory
 const uploadDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Configure multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -26,6 +28,7 @@ const storage = multer.diskStorage({
   },
 });
 
+// File filter for image uploads
 const fileFilter = (req, file, cb) => {
   const filetypes = /jpeg|jpg|png/;
   const mimetype = filetypes.test(file.mimetype);
@@ -45,19 +48,30 @@ const upload = multer({
   },
 });
 
-profileRouter.get("/view", checkAuth, async (req, res) => {
+// Get profile
+authProfile.get("/profile/view", checkAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
+    const user = req.user;
+    const userData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      emailId: user.emailId,
+      skills: user.skills,
+      age: user.age,
+      gender: user.gender,
+      about: user.about,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    if (user.profileImage) {
+      userData.profileImageUrl = `/uploads/${user.profileImage}`;
     }
 
     res.json({
       success: true,
-      user,
+      user: userData,
     });
   } catch (err) {
     console.error("Profile view error:", err);
@@ -68,58 +82,70 @@ profileRouter.get("/view", checkAuth, async (req, res) => {
   }
 });
 
-profileRouter.patch(
-  "/edit",
+authProfile.patch(
+  "/profile/edit",
   checkAuth,
-  upload.single("profileImage"),
+  upload.single("profile"),
   async (req, res) => {
     try {
-      const user = await User.findById(req.user._id);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: "User not found",
-        });
-      }
+      const user = req.user;
+      const updates = req.body;
 
-      const { firstName, lastName, skills, age, gender, about } = req.body;
-      if (firstName) user.firstName = firstName;
-      if (lastName) user.lastName = lastName;
-      if (skills)
-        user.skills = Array.isArray(skills)
-          ? skills
-          : skills.split(",").map((s) => s.trim());
-      if (age) user.age = age;
-      if (gender) user.gender = gender;
-      if (about) user.about = about;
+      const allowedFields = [
+        "firstName",
+        "lastName",
+        "skills",
+        "age",
+        "gender",
+        "about",
+      ];
+      allowedFields.forEach((field) => {
+        if (updates[field] !== undefined) {
+          user[field] = updates[field];
+        }
+      });
 
       if (req.file) {
-        if (user.profileImage && !user.profileImage.startsWith("http")) {
-          try {
+        try {
+          if (user.profileImage && !user.profileImage.includes("daisyui.com")) {
             const oldImagePath = path.join(uploadDir, user.profileImage);
             if (fs.existsSync(oldImagePath)) {
               await unlink(oldImagePath);
             }
-          } catch (err) {
-            console.error("Error deleting old image:", err);
           }
+
+          user.profileImage = req.file.filename;
+        } catch (err) {
+          console.error("Image processing error:", err);
+          return res.status(500).json({
+            success: false,
+            error: "Failed to update profile image",
+          });
         }
-
-        user.profileImage = req.file.filename;
       }
 
-      await user.save();
+      const savedUser = await user.save();
 
-      const userResponse = user.toObject();
-      delete userResponse.password;
-
-      if (user.profileImage && !user.profileImage.startsWith("http")) {
-        userResponse.profileImageUrl = `/uploads/${user.profileImage}`;
-      }
+      const responseData = {
+        _id: savedUser._id,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        emailId: savedUser.emailId,
+        skills: savedUser.skills,
+        age: savedUser.age,
+        gender: savedUser.gender,
+        about: savedUser.about,
+        profileImageUrl: savedUser.profileImage
+          ? `/uploads/${savedUser.profileImage}`
+          : savedUser.profileImage,
+        createdAt: savedUser.createdAt,
+        updatedAt: savedUser.updatedAt,
+      };
 
       res.json({
         success: true,
-        user: userResponse,
+        message: "Profile updated successfully",
+        user: responseData,
       });
     } catch (err) {
       console.error("Profile update error:", err);
@@ -131,4 +157,4 @@ profileRouter.patch(
   }
 );
 
-module.exports = profileRouter;
+module.exports = authProfile;
