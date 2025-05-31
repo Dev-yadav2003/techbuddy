@@ -9,8 +9,6 @@ require("dotenv").config();
 const app = express();
 const initializeSocket = require("./utils/socket");
 
-const path = require("path");
-
 app.use(
   "/profileImage/upload",
   express.static(path.join(__dirname, "public", "profileImage", "upload"))
@@ -31,7 +29,6 @@ const authRouter = require("./routes/auth");
 const authProfile = require("./routes/profile");
 const request = require("./routes/request");
 const userRoute = require("./routes/user");
-const path = require("path");
 
 app.use("/", authRouter);
 app.use("/", authProfile);
