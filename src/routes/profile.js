@@ -33,7 +33,7 @@ authProfile.patch(
       });
 
       if (req.file) {
-        user.profile = `/profileImage/upload/${req.file.filename}`;
+        user.profile = `/upload/${req.file.filename}`;
       }
 
       await user.save();

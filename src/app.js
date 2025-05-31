@@ -9,10 +9,7 @@ require("dotenv").config();
 const app = express();
 const initializeSocket = require("./utils/socket");
 
-app.use(
-  "/profileImage/upload",
-  express.static(path.resolve("public", "profileImage", "upload"))
-);
+app.use("/upload", express.static(path.join(__dirname, "../upload")));
 
 app.use(
   cors({
