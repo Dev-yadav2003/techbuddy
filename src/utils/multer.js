@@ -1,16 +1,8 @@
 const multer = require("multer");
 const crypto = require("crypto");
 const path = require("path");
-const fs = require("fs");
 
-const uploadPath = path.join(
-  __dirname,
-  "..",
-  "public",
-  "profileImage",
-  "upload"
-);
-fs.mkdirSync(uploadPath, { recursive: true });
+const uploadPath = path.join(__dirname, "../public/profileImage/upload");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
