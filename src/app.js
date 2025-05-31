@@ -11,7 +11,7 @@ const initializeSocket = require("./utils/socket");
 
 app.use(
   "/profileImage/upload",
-  express.static(path.join(__dirname, "public", "profileImage", "upload"))
+  express.static(path.resolve("public", "profileImage", "upload"))
 );
 
 app.use(
