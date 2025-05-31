@@ -2,11 +2,19 @@ const express = require("express");
 const connectDb = require("./config/database");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const path = require("path");
 const http = require("http");
 require("dotenv").config();
 
 const app = express();
 const initializeSocket = require("./utils/socket");
+
+const path = require("path");
+
+app.use(
+  "/profileImage/upload",
+  express.static(path.join(__dirname, "public", "profileImage", "upload"))
+);
 
 app.use(
   cors({
@@ -23,6 +31,7 @@ const authRouter = require("./routes/auth");
 const authProfile = require("./routes/profile");
 const request = require("./routes/request");
 const userRoute = require("./routes/user");
+const path = require("path");
 
 app.use("/", authRouter);
 app.use("/", authProfile);
