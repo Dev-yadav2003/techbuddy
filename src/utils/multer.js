@@ -9,6 +9,8 @@ if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });
 }
 
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadPath);
@@ -25,6 +27,14 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_TYPES.includes(file.mimetype)) {
+      const err = new Error("Only JPG, PNG, WEBP or GIF images are allowed");
+      err.status = 400;
+      return cb(err);
+    }
+    cb(null, true);
+  },
 });
 
 module.exports = upload;

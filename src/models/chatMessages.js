@@ -10,15 +10,22 @@ const messagesSchema = new mongoose.Schema(
     text: {
       type: String,
       required: true,
+      trim: true,
+      maxLength: 2000,
     },
   },
   { timestamps: true }
 );
-const chatMessages = new mongoose.Schema({
-  participents: [
-    { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
-  ],
-  messages: [messagesSchema],
-});
+const chatMessages = new mongoose.Schema(
+  {
+    participants: [
+      { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
+    ],
+    messages: [messagesSchema],
+  },
+  { timestamps: true }
+);
+
+chatMessages.index({ participants: 1 });
 
 module.exports = mongoose.model("Chat", chatMessages);

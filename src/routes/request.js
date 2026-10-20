@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Connection = require("../models/connection");
 const User = require("../models/user");
 const checkAuth = require("../middlewares/checkAuth");
@@ -6,13 +7,20 @@ const checkAuth = require("../middlewares/checkAuth");
 const request = express.Router();
 request.post("/request/send/:status/:toUserId", checkAuth, async (req, res) => {
   try {
-    const status = req.params.status;
-    const toUserId = req.params.toUserId;
+    const { status, toUserId } = req.params;
     const fromUserId = req.user._id;
 
     const allowedStatus = ["ignored", "intrested"];
     if (!allowedStatus.includes(status)) {
-      return res.json({ message: "invalid status request" + status });
+      return res.status(400).json({ error: "Invalid status: " + status });
+    }
+
+    if (!mongoose.isValidObjectId(toUserId)) {
+      return res.status(400).json({ error: "Invalid user id" });
+    }
+
+    if (fromUserId.equals(toUserId)) {
+      return res.status(400).json({ error: "Cannot send request to yourself" });
     }
 
     const alreadyRequestExist = await Connection.findOne({
@@ -26,19 +34,18 @@ request.post("/request/send/:status/:toUserId", checkAuth, async (req, res) => {
     });
 
     if (alreadyRequestExist) {
-      return res.status(400).json({ message: "request already exist" });
+      return res.status(409).json({ error: "Request already exists" });
     }
 
-    const isUser = await User.findById(toUserId);
+    const isUser = await User.exists({ _id: toUserId });
     if (!isUser) {
-      return res.json({ message: "user is not present" });
+      return res.status(404).json({ error: "User not found" });
     }
 
     const connection = new Connection({ status, toUserId, fromUserId });
+    const data = await connection.save();
 
-    await connection.save();
-
-    res.send("Request sent successfully!");
+    res.json({ message: "Request sent successfully!", data });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -54,7 +61,11 @@ request.post(
 
       const allowedStatus = ["accepted", "rejected"];
       if (!allowedStatus.includes(status)) {
-        return res.status(400).json({ message: "Invalid status " + status });
+        return res.status(400).json({ error: "Invalid status: " + status });
+      }
+
+      if (!mongoose.isValidObjectId(requestId)) {
+        return res.status(400).json({ error: "Invalid request id" });
       }
 
       const checkRequest = await Connection.findOne({
@@ -64,7 +75,7 @@ request.post(
       });
 
       if (!checkRequest) {
-        return res.status(404).json({ message: "No request found" });
+        return res.status(404).json({ error: "No request found" });
       }
 
       checkRequest.status = status;

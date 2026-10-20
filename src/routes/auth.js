@@ -1,30 +1,16 @@
 const express = require("express");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const validate = require("validator");
-const jwt = require("jsonwebtoken");
+const { validateSignupData } = require("../utils/validation");
+const { setAuthCookie, clearAuthCookie } = require("../utils/auth");
 const userAuth = express.Router();
-
-const validateSignupData = (req) => {
-  const { firstName, lastName, emailId, password } = req.body;
-
-  if (!firstName || !lastName || !emailId || !password) {
-    throw new Error("All fields are required");
-  }
-
-  if (!validate.isEmail(emailId)) {
-    throw new Error("Please enter a valid email address");
-  }
-
-  if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters long");
-  }
-};
 
 userAuth.post("/signUp", async (req, res) => {
   try {
     validateSignupData(req);
-    const { firstName, lastName, emailId, password } = req.body;
+    const { firstName, lastName, password } = req.body;
+    const emailId = req.body.emailId.trim().toLowerCase();
 
     const existingUser = await User.findOne({ emailId });
     if (existingUser) {
@@ -40,26 +26,12 @@ userAuth.post("/signUp", async (req, res) => {
     });
     const savedUser = await user.save();
 
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_PASSWORD, {
-      expiresIn: "1d",
-    });
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    setAuthCookie(res, savedUser._id);
 
     res.status(201).json({
       success: true,
       message: "User created successfully",
-      user: {
-        _id: savedUser._id,
-        firstName: savedUser.firstName,
-        lastName: savedUser.lastName,
-        emailId: savedUser.emailId,
-      },
+      user: savedUser,
     });
   } catch (err) {
     res.status(400).json({
@@ -71,7 +43,8 @@ userAuth.post("/signUp", async (req, res) => {
 
 userAuth.post("/login", async (req, res) => {
   try {
-    const { emailId, password } = req.body;
+    const { password } = req.body;
+    const emailId = req.body.emailId?.trim().toLowerCase();
 
     if (!emailId || !password) {
       return res.status(400).json({
@@ -88,41 +61,21 @@ userAuth.post("/login", async (req, res) => {
     }
 
     const user = await User.findOne({ emailId });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: "No account found with this email",
-      });
-    }
-
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    const isPasswordMatch =
+      user && user.password && (await bcrypt.compare(password, user.password));
     if (!isPasswordMatch) {
       return res.status(401).json({
         success: false,
-        error: "Incorrect password",
+        error: "Invalid email or password",
       });
     }
 
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_PASSWORD, {
-      expiresIn: "1d",
-    });
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    setAuthCookie(res, user._id);
 
     res.json({
       success: true,
       message: "Login successful",
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        emailId: user.emailId,
-      },
+      user,
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -134,7 +87,7 @@ userAuth.post("/login", async (req, res) => {
 });
 
 userAuth.post("/logout", (req, res) => {
-  res.clearCookie("token");
+  clearAuthCookie(res);
   res.json({
     success: true,
     message: "Logged out successfully",
