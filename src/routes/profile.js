@@ -1,18 +1,15 @@
 const express = require("express");
-const path = require("path");
 const checkAuth = require("../middlewares/checkAuth");
-const { validateEditProfileData } = require("../utils/validation");
+const {
+  validateEditProfileData,
+  normalizeEditProfileData,
+} = require("../utils/validation");
 const upload = require("../utils/multer");
 
 const authProfile = express.Router();
 
 authProfile.get("/profile/view", checkAuth, async (req, res) => {
-  try {
-    const user = req.user;
-    res.send(user);
-  } catch (err) {
-    res.status(400).send("Error: " + err.message);
-  }
+  res.json(req.user);
 });
 
 authProfile.patch(
@@ -22,12 +19,12 @@ authProfile.patch(
   async (req, res) => {
     try {
       const user = req.user;
-      const data = req.body;
 
       if (!validateEditProfileData(req)) {
         throw new Error("Invalid edit field(s)");
       }
 
+      const data = normalizeEditProfileData(req.body);
       Object.keys(data).forEach((key) => {
         user[key] = data[key];
       });
@@ -38,10 +35,10 @@ authProfile.patch(
 
       await user.save();
 
-      res.send({ message: "User updated", data: user });
+      res.json({ message: "User updated", data: user });
     } catch (err) {
       console.error("Profile update error:", err.message);
-      res.status(400).send("Error: " + err.message);
+      res.status(400).json({ error: err.message });
     }
   }
 );
